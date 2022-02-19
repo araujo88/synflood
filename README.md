@@ -8,4 +8,4 @@ SYN flood denial-of-service (DoS) attack coded in C using raw sockets. Generates
 
 ## Usage
 
-sudo ./synflood <target_ip_address> <payload> <number_of_threads>
+`sudo ./synflood <target_ip_address> <payload> <number_of_threads>`
