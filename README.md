@@ -12,7 +12,7 @@ SYN flood denial-of-service (DoS) attack coded in C using raw sockets. Generates
 
 ## Example
 
-`sudo ./synflood 1.2.3.4 OWNED 10`
+`sudo ./synflood 1.2.3.4 OWNED 10 80`
 
 Will create 10 threads which will send the following TCP/IP packet in loop:
 

